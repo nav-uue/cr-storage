@@ -2,6 +2,10 @@ use std::fs::{self, File};
 use std::process::Command;
 use std::path::Path;
 use std::str;
+use clap::Parser;
+
+
+mod parser;
 
 
 const IMAGE_FILE: &str = "/tmp/test.image";
@@ -9,7 +13,7 @@ const MOUNT_POINT: &str = "/tmp/test";
 
 
 fn main() {
-
+/*
     println!("--- Loop Device Mounting Demonstration ---");
     println!("NOTE: This program requires root permissions (sudo) to execute the 'mount' command.");
     
@@ -38,6 +42,29 @@ fn main() {
 
     // --- 3. Umount and remove disk (only for testing) ---
     cleanup();
+*/
+
+    let cli = parser::Cli::parse();
+    // Проверяем глобальный флаг
+    if cli.verbose {
+        println!("Режим подробного вывода включен.");
+    }
+
+    // Разделяем логику по сценариям
+    match cli.command {
+        parser::Commands::Create(args) => {
+            println!("Запущен Сценарий Create");
+            println!("Name: {}", args.name);
+            println!("Size: {}", args.size);
+            println!("Path: {}", args.path);
+            // Тут вызываем вашу функцию обработки файла
+        }
+        parser::Commands::Delete(args) => {
+            println!("Запущен Delete");
+            println!("Хост: {}", args.name);
+            // Тут вызываем вашу функцию работы с сетью
+        }
+    }
 
 }
 
