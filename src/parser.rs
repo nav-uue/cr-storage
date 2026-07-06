@@ -54,7 +54,7 @@ pub struct CreateArgs {
 pub struct DeleteArgs {
 
     #[arg(short, long)]
-    pub name: String
+    pub path: String
 
 }
 

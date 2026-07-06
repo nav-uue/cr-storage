@@ -1,11 +1,12 @@
 use std::fs::{self, File};
 use std::process::Command;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::str;
 use clap::Parser;
 
 
 mod parser;
+mod fs_utils;
 
 
 const IMAGE_FILE: &str = "/tmp/test.image";
@@ -13,94 +14,67 @@ const MOUNT_POINT: &str = "/tmp/test";
 
 
 fn main() {
-/*
+
     println!("--- Loop Device Mounting Demonstration ---");
     println!("NOTE: This program requires root permissions (sudo) to execute the 'mount' command.");
-    
-    // --- Setup ---
-    if let Err(e) = setup_directories() {
-        eprintln!("Error during setup: {}", e);
-        return;
-    }
 
-    // --- 1. Create the image file ---
-    match create_image_file() {
-        Ok(()) => println!("Success! File created."),
-        Err(e) => eprintln!("Error creating file: {}", e)
-    }
+/*
 
-    // --- 2. Mount the image as file system ---
+    // Mount the image as file system ---
     match mount_image() {
         Ok(()) => println!("\n✅ Successfully mounted {} as a loop device on {}", IMAGE_FILE, MOUNT_POINT),
         Err(e) => eprintln!("\n❌ Failed to mount image. Ensure you run the program with 'sudo'. Error: {}", e)
     }
 
-    // Give the user time to inspect the mounted directory
-    println!("\n--- Success! The mount point is active. ---");
-    println!("Press Enter to clean up and exit...");
-    let _ = std::io::stdin().read_line(&mut String::new());
-
-    // --- 3. Umount and remove disk (only for testing) ---
-    cleanup();
 */
 
     let cli = parser::Cli::parse();
-    // Проверяем глобальный флаг
+    
+    // Check global flag
     if cli.verbose {
         println!("Режим подробного вывода включен.");
     }
 
-    // Разделяем логику по сценариям
+    // Dispatch CLI commands to scripts
     match cli.command {
         parser::Commands::Create(args) => {
-            println!("Запущен Сценарий Create");
-            println!("Name: {}", args.name);
-            println!("Size: {}", args.size);
-            println!("Path: {}", args.path);
-            // Тут вызываем вашу функцию обработки файла
+
+            // Trim MB/GB from the variable
+            let clean_digits: String = args.size.chars().filter(|c| c.is_ascii_digit()).collect();
+
+            // Build FileArgs from args fields
+            let app_args = fs_utils::FileArgs {
+
+                // convert string to PathBuf
+                path: PathBuf::from(args.path),
+
+                // Pass string as-is
+                name: args.name,
+
+                // convert string to u64
+                size: clean_digits.parse::<u64>().unwrap_or(1),
+
+            };
+
+            match fs_utils::create_image_file(app_args) {
+                Ok(()) => println!("Success! File created."),
+                Err(e) => eprintln!("Error creating file: {}", e)
+            }
+
         }
         parser::Commands::Delete(args) => {
-            println!("Запущен Delete");
-            println!("Хост: {}", args.name);
-            // Тут вызываем вашу функцию работы с сетью
+            let path = format!("{}",args.path);
+            println!("Delete file: {}", &path);
+            if Path::new(&path).exists() {
+                fs::remove_file(&path).unwrap_or_else(|err| {
+                    eprintln!("Error: file not exists or cannot be removed! Details: {}", err);
+                });
+            }
         }
     }
 
 }
 
-/// Create necessary directories.
-fn setup_directories() -> Result<(), std::io::Error> {
-
-    // Clean up any previous runs first
-    if Path::new(IMAGE_FILE).exists() {
-        fs::remove_file(IMAGE_FILE)?;
-    }
-
-    if Path::new(MOUNT_POINT).exists() {
-        fs::remove_dir(MOUNT_POINT)?;
-    }
-
-    // Create the required mount point directory
-    fs::create_dir_all(MOUNT_POINT)?;
-
-    Ok(())
-
-}
-
-/// Create a small file to act the disk image
-fn create_image_file() -> Result<(), std::io::Error> {
-
-    println!("Create image file: {}", IMAGE_FILE);
-
-    // create file in target directory
-    let file = File::create(IMAGE_FILE)?;
- 
-    // Write zero bytes to simulate an image. 32MB minimum size for the ext4 FS 
-    file.set_len(32 * 1024 * 1024)?;
-
-    Ok(())
-
-}
 
 /// Execute `losetup` to attach the file to a loop device, and the `mount` to mount it.
 fn mount_image() -> Result<(), String> {
