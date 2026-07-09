@@ -1,6 +1,6 @@
 # crStorage 🔒
 
-> **Simple tool for creating encrypted block devices**
+> ** A secure, blazing-fast Rust utility that automates losetup and encryption to turn regular files into mounted, encrypted ext4 loop devices. **
 
 ## Features
 - Fast encryption
