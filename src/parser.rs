@@ -31,8 +31,8 @@ pub enum Commands {
 
     #[command(about = "Unmount and delete image file")]
     Delete(DeleteArgs),
-    // Mount(MountArgs),
-    // Umount(UmountArgs),
+    Mount(MountArgs),
+    Umount(UmountArgs),
     // Info(InfoArgs)
 }
 
@@ -58,3 +58,21 @@ pub struct DeleteArgs {
 
 }
 
+#[derive(Args, Debug)]
+pub struct MountArgs {
+
+    #[arg(short, long)]
+    pub device: String,
+
+    #[arg(short, long)]
+    pub path: String
+
+}
+
+#[derive(Args, Debug)]
+pub struct UmountArgs {
+
+    #[arg(short, long)]
+    pub path: String
+
+}
