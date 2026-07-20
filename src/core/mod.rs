@@ -14,28 +14,32 @@ pub fn run() {
     
     // Check global flag
     if cli.verbose {
-        println!("Режим подробного вывода включен.");
+        println!("Verbose mode enabled.");
     }
 
     // Dispatch CLI commands to scripts
     match cli.command {
-        Commands::Create(args) => {
+        Commands::Diskmake(args) => {
 
             // Trim MB/GB from the variable
             let clean_digits: String = args.size.chars().filter(|c| c.is_ascii_digit()).collect();
+            let parsed_mb = clean_digits.parse::<u64>().unwrap_or(1);
+
+            // Parse size from GB to MB
+            let size: u64 = match args.size {
+                s if s.contains("MB") => parsed_mb,
+                s if s.contains("GB") => parsed_mb * 1024,
+                _ => parsed_mb, // Default to MB if the unit suffix is missing
+            };
 
             // Build FileArgs from args fields
             let app_args = fs_utils::FileArgs {
-
+                // target user for the disk
+                user: args.user,
                 // convert string to PathBuf
-                path: PathBuf::from(args.path),
-
-                // Pass string as-is
-                name: args.name,
-
-                // convert string to u64
-                size: clean_digits.parse::<u64>().unwrap_or(1),
-
+                image: args.image,
+                // Image file size
+                size: size,
             };
 
             match fs_utils::create_image_file(app_args) {
@@ -43,15 +47,6 @@ pub fn run() {
                 Err(e) => eprintln!("Error creating file: {}", e)
             }
 
-        }
-        Commands::Delete(args) => {
-            let path = format!("{}",args.path);
-            println!("Delete file: {}", &path);
-            if Path::new(&path).exists() {
-                fs::remove_file(&path).unwrap_or_else(|err| {
-                    eprintln!("Error: file not exists or cannot be removed! Details: {}", err);
-                });
-            }
         }
         Commands::Mount(args) => {
 

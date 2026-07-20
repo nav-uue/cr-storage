@@ -29,8 +29,8 @@ pub struct LoopDevice {
 
 #[derive(Debug)]
 pub struct FileArgs {
-    pub path: PathBuf,
-    pub name: String,
+    pub user: String,
+    pub image: String,
     pub size: u64
 }
 
@@ -183,19 +183,85 @@ impl LoopDevice {
 /// Create a small file to act the disk image
 pub fn create_image_file(args: FileArgs) -> Result<(), std::io::Error> {
 
-    println!("Create image file: {}", args.name);
+    // Convert a string to a path
+    let full_path = Path::new(&args.image);
 
-    let full_path = args.path.join(&args.name);
+    let img_path = match full_path.parent() {
+        Some(path) if path.to_string_lossy().is_empty() || path.to_string_lossy() == "." => format!("/home/{}", args.user),
+        Some(path) => path.to_string_lossy().into_owned(),
+        None => format!("/home/{}", args.user)
+    };
 
-    // create file in target directory
-    let file = std::fs::File::create(&full_path)?;
+    let img_name = match full_path.file_name() {
+        Some(name) => name.to_string_lossy().into_owned(),
+        None => format!("{}.img", args.user)
+    };
 
-    println!("Path: {}", &full_path.display());
+    // Create a new path after validation
+    let new_path_str = format!("{}/{}", img_path, img_name);
+    let new_path = Path::new(&new_path_str);
+
+    match new_path.exists() {
+        true => {
+
+            let parts: Vec<&str> = img_name.split(".").collect();
+
+            let base_name = parts.get(0).unwrap_or(&"user").to_string();
+            let extension = parts.get(1).unwrap_or(&"img").to_string();
+
+            let mut counter = 0;
+            let mut final_path = String::new();
+
+            // Loop until an available name is found
+            loop {
+                // Generate names sequentially: "name.img" for 0, "name_1.img" for 1, etc.
+                let candidate_name = match counter {
+                    0 => format!("{}.{}", base_name, extension),
+                    _ => format!("{}_{}.{}", base_name, counter, extension),
+                };
+
+                // Check if the path exists
+                match Path::new(&candidate_name).exists() {
+                    true => {
+                        // File is busy, increment the counter and go to the next loop
+                        counter += 1;
+                    },
+                    false => {
+                        // Name is free! Save it and exit the loop
+                        final_path = candidate_name;
+                        break;
+                    }
+                }
+            }
+
+            // Create a file with a unique filename
+            match File::create(&final_path) {
+                Ok(file) => {
+                    // Write zero bytes to simulate an image. 32MB minimum size for the ext4 FS 
+                    file.set_len(&args.size * 1024 * 1024)?;
+                    println!("Successfully created file: {}", final_path);
+                },
+                Err(e) => eprintln!("Failed to create file {}: {}", final_path, e),
+            }
+
+        },
+        false => {
+
+            // create file in target directory
+            match File::create(&new_path) {
+                Ok(file) => {
+                    // Write zero bytes to simulate an image. 32MB minimum size for the ext4 FS 
+                    file.set_len(&args.size * 1024 * 1024)?;
+                    println!("Successfully created file: {:?}", new_path);
+                },
+                Err(e) => eprintln!("Failed to create file {:?}: {}", new_path, e),
+            }
+
+        }
+
+    }
  
-    println!("Size: {}", &args.size);
-
-    // Write zero bytes to simulate an image. 32MB minimum size for the ext4 FS 
-    file.set_len(&args.size * 1024 * 1024)?;
+    println!("Size: {} MB", &args.size);
 
     Ok(())
 }
@@ -241,18 +307,18 @@ pub fn get_loop_device(mount_point: &str) -> std::io::Result<Option<String>> {
 }
 
 pub fn get_mount_point(device_path: &str) -> Option<PathBuf> {
-    // Открываем файл со списком текущих монтирований в Linux
+    // Read current mount points from /proc/mounts
     let file = File::open("/proc/mounts").ok()?;
     let reader = BufReader::new(file);
 
     for line in reader.lines().flatten() {
-        // Разделяем строку по пробелам
+        // Split the line by whitespace
         let parts: Vec<&str> = line.split_whitespace().collect();
         
-        // Структура строки: [0] девайс, [1] точка монтирования, [2] тип ФС...
+        // Mount entry format: [0] device, [1] mount point, [2] FS type
         if parts.len() >= 2 && parts[0] == device_path {
             return Some(PathBuf::from(parts[1]));
         }
     }
-    None // Если устройство не примонтировано
+    None // If device is unmounted
 }

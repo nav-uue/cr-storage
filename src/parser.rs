@@ -36,32 +36,33 @@ pub struct Cli {
 #[derive(Subcommand, Debug)]
 pub enum Commands {
 
-    #[command(about = "Create new image file and mount him as loop device")]
-    Create(CreateArgs),
+    #[command(about = "Create a new image file, attach it as a loop device, and format with a file system")]
+    Diskmake(DiskmakeArgs),
 
-    #[command(about = "Unmount and delete image file")]
-    Delete(DeleteArgs),
+    #[command(about = "Attach and mount the image file to a loop device")]
     Mount(MountArgs),
+
+    #[command(about = "Unmount the image and detach it from the loop device")]
     Umount(UmountArgs),
+
+    // #[command(about = "Show information about existing images")]
     // Info(InfoArgs)
 }
 
 #[derive(Args, Debug)]
-pub struct CreateArgs {
+pub struct DiskmakeArgs {
 
     #[arg(short, long)]
-    pub name: String,
+    pub encrypt: bool,
+
+    #[arg(short, long)]
+    pub user: String,
+
+    #[arg(short, long)]
+    pub image: String,
 
     #[arg(short, long)]
     pub size: String,
-
-    #[arg(short, long)]
-    pub path: String
-
-}
-
-#[derive(Args, Debug)]
-pub struct DeleteArgs {
 
     #[arg(short, long)]
     pub path: String
