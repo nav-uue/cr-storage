@@ -1,7 +1,7 @@
 use std::path::{Path, PathBuf};
 use std::process::Command;
 use std::fs::{self, File};
-use std::io::{self, BufRead, BufReader};
+use std::io::{BufRead, BufReader};
 
 
 #[derive(Debug)]
@@ -215,7 +215,7 @@ pub fn create_image_file(args: FileArgs) -> Result<(), std::io::Error> {
             let extension = parts.get(1).unwrap_or(&"img").to_string();
 
             let mut counter = 0;
-            let mut final_path = String::new();
+            let final_path;
 
             // Loop until an available name is found
             loop {
@@ -311,6 +311,7 @@ pub fn get_loop_device(mount_point: &str) -> std::io::Result<Option<String>> {
     Ok(None)
 }
 
+#[allow(dead_code)]
 pub fn get_mount_point(device_path: &str) -> Option<PathBuf> {
     // Read current mount points from /proc/mounts
     let file = File::open("/proc/mounts").ok()?;
@@ -328,6 +329,7 @@ pub fn get_mount_point(device_path: &str) -> Option<PathBuf> {
     None // If device is unmounted
 }
 
+#[allow(dead_code)]
 pub fn check_mountpoint_status(path: &str) -> bool {
     let status = Command::new("moutpoint")
         .args(&["-q", path])

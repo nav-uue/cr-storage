@@ -1,6 +1,6 @@
-use std::fs::{self, File};
+use std::fs;
 use std::process::Command;
-use std::path::{Path, PathBuf};
+use std::path::Path;
 use clap::Parser;
 
 use crate::parser::{Cli, Commands};
@@ -35,7 +35,7 @@ pub fn run() {
             // Build FileArgs from args fields
             let app_args = fs_utils::FileArgs {
                 // target user for the disk
-                user: args.user,
+                user: args.user.clone(),
                 // convert string to PathBuf
                 image: args.image.clone(),
                 // Image file size
@@ -72,9 +72,28 @@ pub fn run() {
 
                         fs_utils::LoopDevice::new(device.clone()).ensure_formatted(fs_utils::FileSystem::Ext4);
 
-                        match fs::create_dir_all(&args.path) {
+                        let mount_point = Path::new(&args.path);
+
+                        match fs::create_dir_all(&mount_point) {
                             Ok(_) => fs_utils::DiskCommand::new_mount(device, args.path.clone()).execute(),
                             Err(e) => eprintln!("Failed create mount point {}: {}", args.path, e)
+                        };
+
+                        if mount_point.exists() {
+
+                            let user_owner = format!("{}", args.user);
+
+                            let chown = Command::new("chown")
+                                .arg("-R")
+                                .arg(&user_owner)
+                                .arg(mount_point)
+                                .status();
+
+                            match chown {
+                                Ok(status) if status.success() => println!("-> Successfully changed ownership for the mount point."),
+                                Ok(status) => eprintln!("Chown exited with error status: {}", status),
+                                Err(e) => eprintln!("Failed to set ownership for the mount point: {}", e),
+                            }
                         }
 
                     }

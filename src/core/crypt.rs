@@ -1,16 +1,11 @@
-use std::process::Command;
 use std::path::Path;
-
 use libcryptsetup_rs::{
-    c_uint,
     consts::{
         flags::{CryptVolumeKey, CryptActivate, CryptDeactivate},
         vals::EncryptionFormat
     },
-    CryptInit, LibcryptErr, TokenInput,
+    CryptInit
 };
-
-use crate::core::fs_utils::get_mount_point;
 
 
 #[derive(Debug)]
